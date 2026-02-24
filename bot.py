@@ -1,13 +1,14 @@
 import requests
-import time
 import os
+import time
+import re
 
 VK_TOKEN = os.getenv("VK_TOKEN")
-USER_ID = os.getenv("USER_ID")  # Куда отправлять сообщения
+USER_ID = os.getenv("USER_ID")
 API_VERSION = "5.199"
 
 KEYWORD = "пост обмена"
-STATE_FILE = "last_checked.txt"
+SENT_FILE = "sent_posts.txt"
 
 
 def load_groups():
@@ -15,21 +16,28 @@ def load_groups():
         return [line.strip() for line in f if line.strip()]
 
 
-def load_state():
-    if not os.path.exists(STATE_FILE):
-        return {}
-    state = {}
-    with open(STATE_FILE, "r", encoding="utf-8") as f:
-        for line in f:
-            group, post_id = line.strip().split(":")
-            state[group] = int(post_id)
-    return state
+def load_sent_posts():
+    if not os.path.exists(SENT_FILE):
+        return set()
+    with open(SENT_FILE, "r", encoding="utf-8") as f:
+        return set(line.strip() for line in f)
 
 
-def save_state(state):
-    with open(STATE_FILE, "w", encoding="utf-8") as f:
-        for group, post_id in state.items():
-            f.write(f"{group}:{post_id}\n")
+def save_sent_posts(sent_posts):
+    with open(SENT_FILE, "w", encoding="utf-8") as f:
+        for post_id in sent_posts:
+            f.write(post_id + "\n")
+
+
+def normalize_text(text):
+    text = text.lower()
+    text = re.sub(r"\s+", " ", text)  # убираем лишние пробелы
+    return text.strip()
+
+
+def contains_keyword(text):
+    normalized = normalize_text(text)
+    return KEYWORD in normalized
 
 
 def get_posts(group):
@@ -58,31 +66,25 @@ def send_message(text):
 
 def main():
     groups = load_groups()
-    state = load_state()
+    sent_posts = load_sent_posts()
+    updated = False
 
     for group in groups:
-        print(f"Проверяем {group}")
         posts = get_posts(group)
 
-        if not posts:
-            continue
-
-        last_saved = state.get(group, 0)
-
         for post in posts:
-            post_id = post["id"]
-            text = post.get("text", "").lower()
+            post_global_id = f"{post['owner_id']}_{post['id']}"
+            text = post.get("text", "")
 
-            if post_id <= last_saved:
-                continue
-
-            if KEYWORD in text:
-                link = f"https://vk.com/{group}?w=wall-{post['owner_id']}_{post_id}"
+            if contains_keyword(text) and post_global_id not in sent_posts:
+                link = f"https://vk.com/wall{post_global_id}"
                 send_message(f"Найден пост обмена:\n{link}")
 
-        state[group] = max(post["id"] for post in posts)
+                sent_posts.add(post_global_id)
+                updated = True
 
-    save_state(state)
+    if updated:
+        save_sent_posts(sent_posts)
 
 
 if __name__ == "__main__":
