@@ -1,20 +1,22 @@
-name: Run VK Bot
+name: Run VK Postcrossing Bot
 
 on:
-  workflow_dispatch:   # ручной запуск
   schedule:
-    - cron: '*/15 * * * *'  
+    - cron: '*/15 * * * *'   # каждые 15 минут (потом поменяешь на 1 раз в день)
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write   # обязательно! иначе push будет запрещён
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          persist-credentials: true
+          fetch-depth: 0   # важно для корректного pull
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -22,7 +24,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install requests
+        run: pip install -r requirements.txt
 
       - name: Run bot
         env:
@@ -31,10 +33,13 @@ jobs:
           USER_ID: ${{ secrets.USER_ID }}
         run: python bot.py
 
-      - name: Commit updated sent_posts
+      - name: Commit and push sent_posts.txt if changed
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
+
+          # подтягиваем актуальную версию main
+          git pull origin main
 
           git add sent_posts.txt
 
@@ -42,6 +47,5 @@ jobs:
             echo "No changes to commit"
           else
             git commit -m "Update sent posts"
-            git pull --rebase origin main
             git push origin main
           fi
