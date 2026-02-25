@@ -3,7 +3,7 @@ name: Run VK Bot
 on:
   workflow_dispatch:   # ручной запуск
   schedule:
-    - cron: '0 4 * * *'  
+    - cron: '*/15 * * * *'  
 
 jobs:
   run-bot:
