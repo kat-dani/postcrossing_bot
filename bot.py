@@ -2,6 +2,7 @@ import requests
 import os
 import time
 import re
+from datetime import datetime, timedelta
 
 VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
 VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
@@ -10,6 +11,7 @@ USER_ID = os.getenv("USER_ID")
 API_VERSION = "5.199"
 KEYWORD = "пост обмена"
 SENT_FILE = "sent_posts.txt"
+DAYS_LIMIT = 31
 
 
 def load_groups():
@@ -46,7 +48,7 @@ def get_posts(group):
         "access_token": VK_SERVICE_TOKEN,
         "v": API_VERSION,
         "domain": group,
-        "count": 10  
+        "count": 10
     }
 
     response = requests.get(url, params=params).json()
@@ -56,6 +58,12 @@ def get_posts(group):
         return []
 
     return response.get("response", {}).get("items", [])
+
+
+def is_recent(post_date):
+    post_datetime = datetime.fromtimestamp(post_date)
+    limit_date = datetime.now() - timedelta(days=DAYS_LIMIT)
+    return post_datetime >= limit_date
 
 
 def send_message(text):
@@ -87,12 +95,15 @@ def main():
         print(f"Проверяем группу: {group}")
         posts = get_posts(group)
 
-        # Сортируем от старых к новым, чтобы уведомления шли по порядку
-        posts = sorted(posts, key=lambda x: x["id"])
+        # Сортируем от старых к новым
+        posts = sorted(posts, key=lambda x: x["date"])
 
         for post in posts:
             post_global_id = f"{post['owner_id']}_{post['id']}"
             text = post.get("text", "")
+
+            if not is_recent(post["date"]):
+                continue
 
             if contains_keyword(text) and post_global_id not in sent_posts:
                 link = f"https://vk.com/wall{post_global_id}"
@@ -103,7 +114,7 @@ def main():
                 if success:
                     sent_posts.add(post_global_id)
                     updated = True
-                    time.sleep(0.5)  # защита от flood control
+                    time.sleep(0.5)
 
     if updated:
         save_sent_posts(sent_posts)
