@@ -5,7 +5,6 @@ import re
 
 VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
 VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
-VK_GROUP_ID = os.getenv("VK_GROUP_ID")
 USER_ID = os.getenv("USER_ID")
 
 API_VERSION = "5.199"
@@ -27,7 +26,7 @@ def load_sent_posts():
 
 def save_sent_posts(sent_posts):
     with open(SENT_FILE, "w", encoding="utf-8") as f:
-        for post_id in sent_posts:
+        for post_id in sorted(sent_posts):
             f.write(post_id + "\n")
 
 
@@ -47,9 +46,15 @@ def get_posts(group):
         "access_token": VK_SERVICE_TOKEN,
         "v": API_VERSION,
         "domain": group,
-        "count": 5
+        "count": 10  
     }
+
     response = requests.get(url, params=params).json()
+
+    if "error" in response:
+        print(f"Ошибка получения постов из {group}: {response['error']}")
+        return []
+
     return response.get("response", {}).get("items", [])
 
 
@@ -62,7 +67,15 @@ def send_message(text):
         "random_id": int(time.time()),
         "message": text
     }
-    requests.get(url, params=params)
+
+    response = requests.get(url, params=params).json()
+
+    if "error" in response:
+        print("Ошибка отправки сообщения:", response["error"])
+        return False
+
+    print("Сообщение успешно отправлено")
+    return True
 
 
 def main():
@@ -71,7 +84,11 @@ def main():
     updated = False
 
     for group in groups:
+        print(f"Проверяем группу: {group}")
         posts = get_posts(group)
+
+        # Сортируем от старых к новым, чтобы уведомления шли по порядку
+        posts = sorted(posts, key=lambda x: x["id"])
 
         for post in posts:
             post_global_id = f"{post['owner_id']}_{post['id']}"
@@ -79,13 +96,20 @@ def main():
 
             if contains_keyword(text) and post_global_id not in sent_posts:
                 link = f"https://vk.com/wall{post_global_id}"
-                send_message(f"Найден пост обмена:\n{link}")
+                message = f"Найден пост обмена:\n{link}"
 
-                sent_posts.add(post_global_id)
-                updated = True
+                success = send_message(message)
+
+                if success:
+                    sent_posts.add(post_global_id)
+                    updated = True
+                    time.sleep(0.5)  # защита от flood control
 
     if updated:
         save_sent_posts(sent_posts)
+        print("Файл sent_posts.txt обновлён")
+    else:
+        print("Новых постов не найдено")
 
 
 if __name__ == "__main__":
