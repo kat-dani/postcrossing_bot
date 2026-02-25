@@ -3,10 +3,12 @@ import os
 import time
 import re
 
-VK_TOKEN = os.getenv("VK_TOKEN")
+VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
+VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
+VK_GROUP_ID = os.getenv("VK_GROUP_ID")
 USER_ID = os.getenv("USER_ID")
-API_VERSION = "5.199"
 
+API_VERSION = "5.199"
 KEYWORD = "пост обмена"
 SENT_FILE = "sent_posts.txt"
 
@@ -31,19 +33,18 @@ def save_sent_posts(sent_posts):
 
 def normalize_text(text):
     text = text.lower()
-    text = re.sub(r"\s+", " ", text)  # убираем лишние пробелы
+    text = re.sub(r"\s+", " ", text)
     return text.strip()
 
 
 def contains_keyword(text):
-    normalized = normalize_text(text)
-    return KEYWORD in normalized
+    return KEYWORD in normalize_text(text)
 
 
 def get_posts(group):
     url = "https://api.vk.com/method/wall.get"
     params = {
-        "access_token": VK_TOKEN,
+        "access_token": VK_SERVICE_TOKEN,
         "v": API_VERSION,
         "domain": group,
         "count": 5
@@ -55,9 +56,9 @@ def get_posts(group):
 def send_message(text):
     url = "https://api.vk.com/method/messages.send"
     params = {
-        "access_token": VK_TOKEN,
+        "access_token": VK_COMMUNITY_TOKEN,
         "v": API_VERSION,
-        "user_id": USER_ID,
+        "peer_id": USER_ID,
         "random_id": int(time.time()),
         "message": text
     }
