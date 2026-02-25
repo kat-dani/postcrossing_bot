@@ -2,7 +2,7 @@ name: Run VK Postcrossing Bot
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # каждые 15 минут (потом поменяешь на 1 раз в день)
+    - cron: '0 4 * * *' 
   workflow_dispatch:
 
 jobs:
