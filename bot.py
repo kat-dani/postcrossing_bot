@@ -2,7 +2,7 @@ import requests
 import os
 import time
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # =======================
 # НАСТРОЙКИ
@@ -17,13 +17,15 @@ KEYWORD = "пост обмена"
 SENT_FILE = "sent_posts.txt"
 DAYS_LIMIT = 31
 
+UTC_PLUS_5 = timezone(timedelta(hours=5))
+
 # =======================
 # ЛОГИРОВАНИЕ
 # =======================
 
 def log(message):
-    now = datetime.now().strftime("%H:%M:%S")
-    print(f"({now}) {message}")
+    now = datetime.now(UTC_PLUS_5).strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{now}] {message}")
 
 
 # =======================
