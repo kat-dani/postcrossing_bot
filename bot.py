@@ -109,7 +109,7 @@ def get_posts(group):
     params = {
         "access_token": VK_SERVICE_TOKEN,
         "v": API_VERSION,
-        "count": 100
+        "count": 30
     }
 
     if group.isdigit():
