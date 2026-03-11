@@ -71,3 +71,6 @@ club_serppost
 postcrossaratov
 postcrossing_adygea
 postcrossing_vu
+postcrossing_belgorod
+222106823
+212456780
