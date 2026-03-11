@@ -45,7 +45,7 @@ KEYWORDS = [
     "swap"
 ]
 
-POST_EXCHANGE_REGEX = re.compile(r"пост\w*\s+обмен\w*", re.IGNORECASE)
+POST_EXCHANGE_REGEX = re.compile(r"(\bпост\w*[^.!?]{0,40}обмен\w*|\bобмен\w*[^.!?]{0,40}пост\w*)", re.IGNORECASE)
 
 
 def log(message):
