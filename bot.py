@@ -6,7 +6,9 @@ from datetime import datetime, timedelta, timezone
 
 VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
 VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
-USER_ID = os.getenv("USER_ID")
+
+# теперь можно указать несколько получателей
+USER_IDS = os.getenv("USER_IDS").split(",")
 
 API_VERSION = "5.199"
 
@@ -43,7 +45,10 @@ KEYWORDS = [
     "swap"
 ]
 
-POST_EXCHANGE_REGEX = re.compile(r"(\bпост\w*[^.!?]{0,40}обмен\w*|\bобмен\w*[^.!?]{0,40}пост\w*)", re.IGNORECASE)
+POST_EXCHANGE_REGEX = re.compile(
+    r"(\bпост\w*[^.!?]{0,40}обмен\w*|\bобмен\w*[^.!?]{0,40}пост\w*)",
+    re.IGNORECASE
+)
 
 
 def log(message):
@@ -155,20 +160,22 @@ def send_message(text):
 
     url = "https://api.vk.com/method/messages.send"
 
-    params = {
-        "access_token": VK_COMMUNITY_TOKEN,
-        "v": API_VERSION,
-        "peer_id": USER_ID,
-        "random_id": int(time.time() * 1000),
-        "message": text
-    }
+    for uid in USER_IDS:
 
-    response = requests.get(url, params=params).json()
+        params = {
+            "access_token": VK_COMMUNITY_TOKEN,
+            "v": API_VERSION,
+            "peer_id": uid.strip(),
+            "random_id": int(time.time() * 1000),
+            "message": text
+        }
 
-    if "error" in response:
-        log(f"Ошибка отправки: {response['error']}")
+        response = requests.get(url, params=params).json()
 
-    time.sleep(0.4)
+        if "error" in response:
+            log(f"Ошибка отправки пользователю {uid}: {response['error']}")
+
+        time.sleep(0.4)
 
 
 def main():
