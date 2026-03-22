@@ -7,8 +7,11 @@ from datetime import datetime, timedelta, timezone
 VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
 VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
 
-# теперь можно указать несколько получателей
 USER_IDS = os.getenv("USER_IDS").split(",")
+
+# 👇 добавили
+MY_ID = USER_IDS[0].strip()
+FRIEND_ID = USER_IDS[1].strip()
 
 API_VERSION = "5.199"
 
@@ -156,11 +159,15 @@ def get_group_name(group):
     return group
 
 
-def send_message(text):
+# 👇 изменили функцию
+def send_message(text, target_ids=None):
 
     url = "https://api.vk.com/method/messages.send"
 
-    for uid in USER_IDS:
+    if target_ids is None:
+        target_ids = USER_IDS
+
+    for uid in target_ids:
 
         params = {
             "access_token": VK_COMMUNITY_TOKEN,
@@ -228,11 +235,26 @@ def main():
 
                 if not intro_sent:
 
+                    # 👇 всем
                     send_message("Привет! Найдены посты обмена")
 
+                    # 👇 тебе
                     send_message(
                         "Ищу обмен :)\n"
-                        "https://vk.com/club228489482?from=groups&w=wall-228489482_1"
+                        "https://vk.com/club228489482?from=groups&w=wall-228489482_1",
+                        target_ids=[MY_ID]
+                    )
+
+                    # 👇 подруге
+                    send_message(
+                        "Ищу обмен\n"
+                        "Лес https://vk.com/album59896836_311791154\n"
+                        "Гарри Поттер https://vk.com/album59896836_311791148\n"
+                        "Картины https://vk.com/album59896836_311791101\n"
+                        "Храмы Тобольска https://vk.com/album59896836_311791064\n"
+                        "Курган https://vk.com/album59896836_311790998\n"
+                        "Разное https://vk.com/album59896836_311791055",
+                        target_ids=[FRIEND_ID]
                     )
 
                     intro_sent = True
