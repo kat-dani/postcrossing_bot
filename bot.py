@@ -45,7 +45,8 @@ KEYWORDS = [
     "обменяю",
     "обменяю на",
 
-    "swap"
+    "swap",
+    "удачных обменов"
 ]
 
 POST_EXCHANGE_REGEX = re.compile(
