@@ -248,21 +248,7 @@ def main():
                     # 👇 подруге
                     send_message(
                         "Ищу обмен\n"
-                        "Властелин колец https://vk.com/album59896836_311908714\n"
-                        "Гарри Поттер https://vk.com/album59896836_311791148\n"
-                        "Аркейн https://vk.com/album59896836_312001470\n"
-                        "День космонавтики https://vk.com/album59896836_312039778\n"
-                        "Города, архитектура https://vk.com/album59896836_311791064\n"
-                        "Весна/лето https://vk.com/album59896836_311908951\n"
-                        "Лес https://vk.com/album59896836_311791154\n"
-                        "Совы https://vk.com/album59896836_312039792\n"
-                        "Котики https://vk.com/album59896836_311908944\n"
-                        "Картины пейзаж https://vk.com/album59896836_311791101\n"
-                        "Айвазовский https://vk.com/album59896836_312039808\n"
-                        "Разное https://vk.com/album59896836_311791055\n"
-                        "Новый год https://vk.com/album59896836_311908879\n"
-                        "Зима https://vk.com/album59896836_312001484\n"
-                        "Самодельные https://vk.com/album59896836_312001414",
+                        "https://vk.com/kate_dani999?w=wall-228489482_9",
                         target_ids=[FRIEND_ID]
                     )
 
