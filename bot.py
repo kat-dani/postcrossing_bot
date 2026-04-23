@@ -9,7 +9,6 @@ VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
 
 USER_IDS = os.getenv("USER_IDS").split(",")
 
-# 👇 добавили
 MY_ID = USER_IDS[0].strip()
 FRIEND_ID = USER_IDS[1].strip()
 
@@ -21,6 +20,13 @@ SENT_FILE = "sent_posts.txt"
 GROUPS_FILE = "groups.txt"
 
 DAYS_LIMIT = 31
+SPECIAL_GROUP_HOURS_LIMIT = 24
+
+ALWAYS_SEND_GROUPS = {
+    "club218412300",
+    "218412300",
+    "postcrosserfandomclub"
+}
 
 KEYWORDS = [
     "обмен открыт",
@@ -67,7 +73,6 @@ def normalize_text(text):
 
 
 def contains_keyword(text):
-
     text_norm = normalize_text(text)
 
     if POST_EXCHANGE_REGEX.search(text_norm):
@@ -78,6 +83,19 @@ def contains_keyword(text):
             return True
 
     return False
+
+
+def normalize_group_name(group):
+    group = group.strip()
+    group = group.replace("https://vk.com/", "")
+    group = group.replace("http://vk.com/", "")
+    group = group.replace("vk.com/", "")
+    group = group.strip("/")
+    return group.lower()
+
+
+def is_always_send_group(group):
+    return normalize_group_name(group) in ALWAYS_SEND_GROUPS
 
 
 def load_groups():
@@ -100,16 +118,21 @@ def save_sent_posts(posts):
 
 
 def is_recent(post_date):
-
     post_time = datetime.fromtimestamp(post_date)
     limit = datetime.now() - timedelta(days=DAYS_LIMIT)
+    return post_time >= limit
 
+
+def is_recent_special(post_date):
+    post_time = datetime.fromtimestamp(post_date)
+    limit = datetime.now() - timedelta(hours=SPECIAL_GROUP_HOURS_LIMIT)
     return post_time >= limit
 
 
 def get_posts(group):
-
     url = "https://api.vk.com/method/wall.get"
+
+    clean_group = normalize_group_name(group)
 
     params = {
         "access_token": VK_SERVICE_TOKEN,
@@ -117,10 +140,14 @@ def get_posts(group):
         "count": 30
     }
 
-    if group.isdigit():
-        params["owner_id"] = f"-{group}"
+    if clean_group.isdigit():
+        params["owner_id"] = f"-{clean_group}"
+    elif clean_group.startswith("club") and clean_group[4:].isdigit():
+        params["owner_id"] = f"-{clean_group[4:]}"
+    elif clean_group.startswith("public") and clean_group[6:].isdigit():
+        params["owner_id"] = f"-{clean_group[6:]}"
     else:
-        params["domain"] = group
+        params["domain"] = clean_group
 
     response = requests.get(url, params=params).json()
 
@@ -132,13 +159,21 @@ def get_posts(group):
 
 
 def get_group_name(group):
-
     url = "https://api.vk.com/method/groups.getById"
+
+    clean_group = normalize_group_name(group)
+
+    if clean_group.startswith("club") and clean_group[4:].isdigit():
+        group_id = clean_group[4:]
+    elif clean_group.startswith("public") and clean_group[6:].isdigit():
+        group_id = clean_group[6:]
+    else:
+        group_id = clean_group
 
     params = {
         "access_token": VK_SERVICE_TOKEN,
         "v": API_VERSION,
-        "group_id": group
+        "group_id": group_id
     }
 
     response = requests.get(url, params=params).json()
@@ -160,16 +195,13 @@ def get_group_name(group):
     return group
 
 
-# 👇 изменили функцию
 def send_message(text, target_ids=None):
-
     url = "https://api.vk.com/method/messages.send"
 
     if target_ids is None:
         target_ids = USER_IDS
 
     for uid in target_ids:
-
         params = {
             "access_token": VK_COMMUNITY_TOKEN,
             "v": API_VERSION,
@@ -187,7 +219,6 @@ def send_message(text, target_ids=None):
 
 
 def main():
-
     start_time = time.time()
 
     log("🚀 Запуск бота")
@@ -202,7 +233,6 @@ def main():
     found_posts = 0
 
     for group in groups:
-
         total_groups += 1
 
         log(f"🔍 Проверяем группу {group}")
@@ -216,37 +246,37 @@ def main():
         posts = sorted(posts, key=lambda x: x["date"])
 
         group_name = None
+        always_send = is_always_send_group(group)
 
         for post in posts:
-
-            if not is_recent(post["date"]):
-                continue
-
             post_id = f"{post['owner_id']}_{post['id']}"
 
             if post_id in sent_posts:
                 continue
 
-            text = post.get("text", "")
+            if always_send:
+                if not is_recent_special(post["date"]):
+                    continue
+                matched = True
+            else:
+                if not is_recent(post["date"]):
+                    continue
+                matched = contains_keyword(post.get("text", ""))
 
-            if contains_keyword(text):
+            if matched:
 
                 if group_name is None:
                     group_name = get_group_name(group)
 
                 if not intro_sent:
+                    send_message("Привет! Найдены новые посты")
 
-                    # 👇 всем
-                    send_message("Привет! Найдены посты обмена")
-
-                    # 👇 тебе
                     send_message(
                         "Ищу обмен :)\n"
                         "https://vk.com/kate_dani999?w=wall-228489482_8",
                         target_ids=[MY_ID]
                     )
 
-                    # 👇 подруге
                     send_message(
                         "Ищу обмен\n"
                         "https://vk.com/kate_dani999?w=wall-228489482_9",
