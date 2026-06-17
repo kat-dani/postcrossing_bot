@@ -23,7 +23,6 @@ DAYS_LIMIT = 31
 SPECIAL_GROUP_HOURS_LIMIT = 24
 
 ALWAYS_SEND_GROUPS = {
-    "club218412300",
     "218412300",
     "postcrosserfandomclub"
 }
