@@ -277,8 +277,8 @@ def main():
                     )
 
                     send_message(
-                        "Ищу\n"
-                        "https://vk.com/wall-239325325_2",
+                        "Ищу \n"
+                        "https://vk.com/wall-239325325_3"",
                         target_ids=[FRIEND_ID]
                     )
 
