@@ -272,7 +272,7 @@ def main():
 
                     send_message(
                         "Ищу обмен :)\n"
-                        "https://vk.com/kate_dani999?w=wall-228489482_8",
+                        "https://vk.ru/kate_dani999?w=wall-228489482_13",
                         target_ids=[MY_ID]
                     )
 
