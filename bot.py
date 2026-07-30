@@ -269,7 +269,13 @@ def main():
 
                 if not intro_sent:
                     send_message("Привет! Найдены новые посты")
-
+                   
+                    send_message(
+                        "Ищу обмен :)\n"
+                        "https://vk.ru/wall-228489482_14",
+                        target_ids=[MY_ID]
+                    )
+                    
                     send_message(
                         "Ищу обмен :)\n"
                         "https://vk.ru/wall-228489482_13",
