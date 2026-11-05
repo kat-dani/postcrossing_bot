@@ -271,20 +271,20 @@ def main():
                     send_message("Привет! Найдены новые посты")
                    
                     send_message(
-                        "Ищу обмен :)\n"
+                        "Ищу обмен\n"
                         "https://vk.ru/wall-228489482_14",
                         target_ids=[MY_ID]
                     )
                     
                     send_message(
-                        "Ищу обмен :)\n"
+                        "Ищу обмен\n"
                         "https://vk.ru/wall-228489482_13",
                         target_ids=[MY_ID]
                     )
 
                     send_message(
-                        "Ищу \n"
-                        "https://vk.com/wall-239325325_3",
+                        "Ищу\n"
+                        "https://vk.ru/wall-239325325_8",
                         target_ids=[FRIEND_ID]
                     )
 
