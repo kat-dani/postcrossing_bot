@@ -31,6 +31,7 @@ jobs:
           VK_SERVICE_TOKEN: ${{ secrets.VK_SERVICE_TOKEN }}
           VK_COMMUNITY_TOKEN: ${{ secrets.VK_COMMUNITY_TOKEN }}
           USER_IDS: ${{ secrets.USER_IDS }}
+          VK_GROUP_ID: ${{ secrets.VK_GROUP_ID }}
         run: python bot.py
 
       - name: Commit and push sent_posts.txt if changed
