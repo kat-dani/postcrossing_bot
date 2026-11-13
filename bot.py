@@ -1,5 +1,6 @@
 import requests
 import os
+import random
 import time
 import re
 from datetime import datetime, timedelta, timezone
@@ -7,10 +8,23 @@ from datetime import datetime, timedelta, timezone
 VK_SERVICE_TOKEN = os.getenv("VK_SERVICE_TOKEN")
 VK_COMMUNITY_TOKEN = os.getenv("VK_COMMUNITY_TOKEN")
 
-USER_IDS = os.getenv("USER_IDS").split(",")
+# ID сообщества (положительное число, без минуса), к которому подключён VK Donut.
+# Если не задан — бот работает как раньше, только для FREE_USER_IDS.
+VK_GROUP_ID = os.getenv("VK_GROUP_ID", "").strip().lstrip("-")
 
-MY_ID = USER_IDS[0].strip()
-FRIEND_ID = USER_IDS[1].strip()
+# Бесплатный доступ: вы, подруга и все, кого добавите в secret USER_IDS вручную.
+FREE_USER_IDS = [u.strip() for u in os.getenv("USER_IDS", "").split(",") if u.strip()]
+
+MY_ID = FREE_USER_IDS[0] if len(FREE_USER_IDS) > 0 else None
+FRIEND_ID = FREE_USER_IDS[1] if len(FREE_USER_IDS) > 1 else None
+
+# Пользователи, которым нельзя написать (не разрешили сообщения / чёрный список).
+# Заполняется по ходу работы, чтобы не слать им запросы повторно на каждый пост.
+UNREACHABLE = set()
+
+# Коды ошибок messages.send: 900 - в чёрном списке, 901 - не разрешил сообщения
+# от сообщества, 902 - ограничения приватности, 917 - нет доступа к диалогу.
+UNREACHABLE_ERROR_CODES = {900, 901, 902, 917}
 
 API_VERSION = "5.199"
 
@@ -194,25 +208,102 @@ def get_group_name(group):
     return group
 
 
-def send_message(text, target_ids=None):
-    url = "https://api.vk.com/method/messages.send"
+def get_donut_ids():
+    """Возвращает vk_id действующих платных подписчиков (донов) сообщества."""
+    if not VK_GROUP_ID:
+        log("VK_GROUP_ID не задан, платные подписчики не проверяются")
+        return []
 
-    if target_ids is None:
-        target_ids = USER_IDS
+    url = "https://api.vk.com/method/groups.getMembers"
 
-    for uid in target_ids:
+    donut_ids = []
+    offset = 0
+
+    while True:
         params = {
             "access_token": VK_COMMUNITY_TOKEN,
             "v": API_VERSION,
-            "peer_id": uid.strip(),
-            "random_id": int(time.time() * 1000),
+            "group_id": VK_GROUP_ID,
+            "filter": "donut",
+            "count": 1000,
+            "offset": offset
+        }
+
+        try:
+            response = requests.get(url, params=params, timeout=30).json()
+        except requests.RequestException as e:
+            log(f"Ошибка сети при получении донов: {e}")
+            return donut_ids
+
+        if "error" in response:
+            log(f"Ошибка получения донов: {response['error']}")
+            return donut_ids
+
+        data = response["response"]
+        items = data.get("items", [])
+
+        donut_ids.extend(str(i) for i in items)
+        offset += len(items)
+
+        if not items or offset >= data.get("count", 0):
+            break
+
+        time.sleep(0.4)
+
+    return donut_ids
+
+
+def build_recipients():
+    """Бесплатные пользователи + платные подписчики без дублей."""
+    donut_ids = get_donut_ids()
+
+    recipients = list(FREE_USER_IDS)
+    for uid in donut_ids:
+        if uid not in recipients:
+            recipients.append(uid)
+
+    paid_only = len(recipients) - len(FREE_USER_IDS)
+
+    log(f"Бесплатных получателей: {len(FREE_USER_IDS)}")
+    log(f"Донов всего: {len(donut_ids)})
+
+    return recipients
+
+
+def send_message(text, target_ids):
+    url = "https://api.vk.com/method/messages.send"
+
+    for uid in target_ids:
+        uid = str(uid).strip()
+
+        if uid in UNREACHABLE:
+            continue
+
+        params = {
+            "access_token": VK_COMMUNITY_TOKEN,
+            "v": API_VERSION,
+            "peer_id": uid,
+            "random_id": random.randint(1, 2**31 - 1),
             "message": text
         }
 
-        response = requests.get(url, params=params).json()
+        try:
+            response = requests.get(url, params=params, timeout=30).json()
+        except requests.RequestException as e:
+            log(f"Ошибка сети при отправке пользователю {uid}: {e}")
+            time.sleep(0.4)
+            continue
 
-        if "error" in response:
-            log(f"Ошибка отправки пользователю {uid}: {response['error']}")
+        error = response.get("error")
+
+        if error:
+            code = error.get("error_code")
+
+            if code in UNREACHABLE_ERROR_CODES:
+                UNREACHABLE.add(uid)
+                log(f"Пользователю {uid} нельзя написать (код {code}), пропускаю до конца запуска")
+            else:
+                log(f"Ошибка отправки пользователю {uid}: {error}")
 
         time.sleep(0.4)
 
@@ -224,6 +315,11 @@ def main():
 
     groups = load_groups()
     sent_posts = load_sent_posts()
+    recipients = build_recipients()
+
+    if not recipients:
+        log("Нет получателей: проверьте USER_IDS и VK_GROUP_ID")
+        return
 
     intro_sent = False
 
@@ -268,25 +364,28 @@ def main():
                     group_name = get_group_name(group)
 
                 if not intro_sent:
-                    send_message("Привет! Найдены новые посты")
-                   
-                    send_message(
-                        "Ищу обмен\n"
-                        "https://vk.ru/wall-228489482_14",
-                        target_ids=[MY_ID]
-                    )
-                    
-                    send_message(
-                        "Ищу обмен\n"
-                        "https://vk.ru/wall-228489482_13",
-                        target_ids=[MY_ID]
-                    )
+                    send_message("Привет! Найдены новые посты", recipients)
 
-                    send_message(
-                        "Ищу\n"
-                        "https://vk.ru/wall-239325325_8",
-                        target_ids=[FRIEND_ID]
-                    )
+                    # Персональные сообщения только для владельца и подруги
+                    if MY_ID:
+                        send_message(
+                            "Ищу обмен\n"
+                            "https://vk.ru/wall-228489482_14",
+                            target_ids=[MY_ID]
+                        )
+
+                        send_message(
+                            "Ищу обмен\n"
+                            "https://vk.ru/wall-228489482_13",
+                            target_ids=[MY_ID]
+                        )
+
+                    if FRIEND_ID:
+                        send_message(
+                            "Ищу\n"
+                            "https://vk.ru/wall-239325325_8",
+                            target_ids=[FRIEND_ID]
+                        )
 
                     intro_sent = True
 
@@ -300,7 +399,7 @@ def main():
                     f"{link}"
                 )
 
-                send_message(message)
+                send_message(message, recipients)
 
                 sent_posts.add(post_id)
 
@@ -312,6 +411,7 @@ def main():
     log(f"Проверено групп: {total_groups}")
     log(f"Ошибок доступа: {error_groups}")
     log(f"Найдено новых постов: {found_posts}")
+    log(f"Получателей: {len(recipients)}, из них Доны: {len(donut_ids)}, недоступны для сообщений: {len(UNREACHABLE)}")
 
     duration = round(time.time() - start_time, 2)
 
