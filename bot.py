@@ -265,7 +265,7 @@ def build_recipients():
     paid_only = len(recipients) - len(FREE_USER_IDS)
 
     log(f"Бесплатных получателей: {len(FREE_USER_IDS)}")
-    log(f"Донов всего: {len(donut_ids)})
+    log(f"Донов всего: {len(donut_ids)}")
 
     return recipients
 
