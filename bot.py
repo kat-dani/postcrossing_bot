@@ -267,7 +267,7 @@ def build_recipients():
     log(f"Бесплатных получателей: {len(FREE_USER_IDS)}")
     log(f"Донов всего: {len(donut_ids)}")
 
-    return recipients
+    return recipients, donut_ids
 
 
 def send_message(text, target_ids):
@@ -315,7 +315,7 @@ def main():
 
     groups = load_groups()
     sent_posts = load_sent_posts()
-    recipients = build_recipients()
+    recipients, donut_ids = build_recipients()
 
     if not recipients:
         log("Нет получателей: проверьте USER_IDS и VK_GROUP_ID")
