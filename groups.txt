@@ -62,7 +62,6 @@ stupino_meetups
 bumblebee_cards
 chp_postcrossing
 postkross_wjatka
-postcrossing33
 postcrossing_belladonna
 orelpostcrossers
 arhcrossing
