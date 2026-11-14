@@ -370,7 +370,7 @@ def main():
                     if MY_ID:
                         send_message(
                             "Ищу обмен\n"
-                            "https://vk.ru/wall-228489482_14",
+                            "https://vk.ru/kate_dani999",
                             target_ids=[MY_ID]
                         )
 
